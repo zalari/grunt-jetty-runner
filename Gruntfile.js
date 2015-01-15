@@ -29,24 +29,36 @@ module.exports = function(grunt) {
     },
 
     // Configuration to be run (and then tested).
-    jetty_runner: {
-      default_options: {
-        options: {
-        },
-        files: {
-          'tmp/default_options': ['test/fixtures/testing', 'test/fixtures/123']
-        }
+    jettyRunner: {
+
+      options: {
+        port: 9090
       },
-      custom_options: {
+
+      production: {
         options: {
-          separator: ': ',
-          punctuation: ' !!!'
+          port:8080,
+          useInternalJetty:false
         },
-        files: {
-          'tmp/custom_options': ['test/fixtures/testing', 'test/fixtures/123']
-        }
+        context: [
+          {src:'/Users/chris/Documents/Projekt-Repos/Pentasys/otdb/prototyp/server/web/web-impl/target/otdb-rs.war', path:'/otdb-rs'},
+          {src:'/Users/chris/Documents/Projekt-Repos/Pentasys/otdb/prototyp/angular-app/target/otdb-app.war', path:'/angular-app'}
+        ]
+      },
+
+      dev: {
+
+        context: [
+          {src:['/Users/chris/Documents/Projekt-Repos/Pentasys/otdb/prototyp/server/web/web-impl/target/otdb-rs.war'], path:'/otdb-rs'},
+          {src:['/Users/chris/Documents/Projekt-Repos/Pentasys/otdb/prototyp/angular-app/target/otdb-app.war'], path:'/angular-app'}
+        ]
       }
+
+
+
     },
+
+
 
     // Unit tests.
     nodeunit: {
@@ -65,7 +77,12 @@ module.exports = function(grunt) {
 
   // Whenever the "test" task is run, first clean the "tmp" dir, then run this
   // plugin's task(s), then test the result.
-  grunt.registerTask('test', ['clean', 'jetty_runner', 'nodeunit']);
+  grunt.registerTask('test', ['clean', 'jettyRunner', 'nodeunit']);
+
+  //test it
+  grunt.registerTask('testJettyAll',['jettyRunner']);
+  grunt.registerTask('testJettySingle',['jettyRunner:production']);
+
 
   // By default, lint and run all tests.
   grunt.registerTask('default', ['jshint', 'test']);

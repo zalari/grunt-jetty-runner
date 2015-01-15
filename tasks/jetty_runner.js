@@ -8,43 +8,99 @@
 
 'use strict';
 
+var _ = require('lodash'),
+    child_process = require('child_process');
+
+var spawn = child_process.spawn;
+
+var cpCache = [];
+
 module.exports = function(grunt) {
 
-  // Please see the Grunt documentation for more information regarding task
-  // creation: http://gruntjs.com/creating-tasks
 
-  grunt.registerMultiTask('jetty_runner', 'Grunt plugin to run jetty-runner from grunt; bundles current jetty-runner as well.', function() {
+  grunt.registerMultiTask('jettyRunner', 'Grunt plugin to run jetty-runner from grunt; bundles current jetty-runner as well.', function() {
     // Merge task-specific and/or target-specific options with these defaults.
     var options = this.options({
-      punctuation: '.',
-      separator: ', '
+      useInternalJetty : true,
+      delayForSuccess : 10
     });
 
-    // Iterate over all specified file groups.
-    this.files.forEach(function(f) {
-      // Concat specified files.
-      var src = f.src.filter(function(filepath) {
-        // Warn on and remove invalid source files (if nonull was set).
-        if (!grunt.file.exists(filepath)) {
-          grunt.log.warn('Source file "' + filepath + '" not found.');
-          return false;
-        } else {
-          return true;
-        }
-      }).map(function(filepath) {
-        // Read file source.
-        return grunt.file.read(filepath);
-      }).join(grunt.util.normalizelf(options.separator));
+    //merge options with task specific options
+    options = _.merge(options,this.data.options);
 
-      // Handle options.
-      src += options.punctuation;
+    /*console.log(this);
+    console.log(options);
+*/
+    var commandStr='';
+    var args = [];
 
-      // Write the destination file.
-      grunt.file.write(f.dest, src);
+    if (options.useInternalJetty)
+    {
+      //commandStr='java -jar jetty-runner.jar';
+      commandStr='java';
+      args.push('-jar');
+      args.push('jetty-runner.jar');
 
-      // Print a success message.
-      grunt.log.writeln('File "' + f.dest + '" created.');
+    } else {
+      commandStr='jetty-runner';
+    }
+
+    //iterate over all context entries
+    //TODO: fail on emtpy context
+    _.forEach(this.data.context,function(contextObj){
+      //path option
+      if (contextObj.path) {
+        //commandStr+=' --path '+contextObj.path;
+        args.push('--path');
+        args.push(contextObj.path);
+      }
+      //contextPath
+      //commandStr+=' '+contextObj.src;
+      args.push(contextObj.src);
     });
+
+    var done = this.async();
+
+    grunt.log.writeln('spawning jetty with:'+commandStr);
+
+    var jettyProcess = spawn(commandStr,args);
+
+    jettyProcess.on('error',function(error){
+      console.log(error);
+      done(error);
+    });
+
+    cpCache.push(jettyProcess);
+
+    /*jettyProcess.stdout.on('data', function (data) {
+      console.log('stdout: ' + data);
+    });*/
+
+    setTimeout(function(){done()},options.delayForSuccess*1000);
+
+    /*exec(commandStr,function(error){
+      if (error!==null)
+      {
+        done(error);
+      }
+      else {
+        done();
+      }
+    });*/
+
+
+
+
+
   });
 
 };
+
+process.on('exit', function () {
+  console.log('exit...');
+  cpCache.forEach(function (el) {
+    console.log('Killing a cp...');
+    el.kill();
+  });
+});
+
